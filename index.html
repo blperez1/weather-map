@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather App</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <script src='https://api.mapbox.com/mapbox-gl-js/v1.12.0/mapbox-gl.js'></script>
+    <link href='https://api.mapbox.com/mapbox-gl-js/v1.12.0/mapbox-gl.css' rel='stylesheet'/>
+    <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v4.5.1/mapbox-gl-geocoder.min.js"></script>
+    <style>
+        #map {
+            width: 100%;
+            height: 400px;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-light bg-light">
+        <a class="navbar-brand">Weather App</a>
+       <div id="geocoder"></div>
+      </nav>
+    <main>
+        <h2 id="location" class="m-3"></h2>
+        <div class="d-flex justify-content-around" id="forecast"></div>
+        <div id="map"></div>
+    </main>
+
+    <script src="js/keys.js"></script>
+    <script src="https://code.jquery.com/jquery-2.2.4.min.js" integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44=" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
+    <script>
+    (function(){ 
+        'use strict'
+        $(document).ready(function() {
+        
+        function convertDay(dt) {
+            let dateTime = new Date(dt).toDateString();
+            return dateTime
+        }
+
+        function renderForecast(locationName, forecast ,index) {
+            const {dt, dt_txt, main, pop, rain, sys, visiblility, weather, wind} = forecast
+            return `
+                 <div class="card" style="width: 18rem;">
+                    <div class="card-body">
+                        <h5 class="card-title">${convertDay(dt_txt)}</h5>
+                        <h5 class="card-title">${weather[0].description}</h5>
+                        <div><img src="http://openweathermap.org/img/wn/${weather[0].icon}.png"></div> 
+                        <h6 class="card-subtitle mb-2 text-muted">${main.temp_max} / ${main.temp_min}</h6>
+                        <p class="card-text">${wind.speed}</p>
+                        <p class="card-text">${main.pressure}</p>
+                    </div>
+                </div>
+            `
+
+        }
+
+        function renderForecasts(locationName, forecasts){
+            let html = ' '
+            for(let forecast of forecasts) {
+                html += renderForecast(locationName, forecast)
+            }
+            $('#forecast').html(html)
+            $('#location').html(`${locationName} Weather`)
+        }
+
+         function mapCoords(lon, lat) {
+            var longitude = `${lon}`
+            var latitude = `${lat}`
+            var lonLat = [longitude, latitude]
+            return lonLat
+        }
+
+        function placeMarker(map, lonlat) {
+            let marker = new mapboxgl.Marker({draggable: true})
+                    .setLngLat(lonlat)
+                    .addTo(map);
+                return marker.getLngLat()
+        } 
+        let currentLocation = "" || "San Antonio";
+        
+   
+        
+        
+        
+        
+        $.get("http://api.openweathermap.org/data/2.5/forecast", {
+                APPID: openWeatherKey,
+                q: currentLocation,
+                units: "imperial",
+                cnt: 5
+                
+            }).done(function (data) {
+                console.log(data);
+                console.log(data.list)
+                renderForecasts(data.city.name, data.list)
+                
+                mapboxgl.accessToken = key;
+                //  let mapCoor = mapCoords(data.city.coord.lon, data.city.coord.lat)
+                const latLong = [data.city.coord.lon, data.city.coord.lat]
+                let map = new mapboxgl.Map({
+                    container: 'map',
+                    style: 'mapbox://styles/mapbox/streets-v11', 
+                    center: latLong,
+                    zoom: 9
+                });
+
+                placeMarker(map, latLong)
+                let geocoder = new MapboxGeocoder({
+                    accessToken: key,
+                    mapboxgl: mapboxgl
+                });
+
+                document.getElementById('geocoder').appendChild(geocoder.onAdd(map));
+                //renderGeocoderInput(map, key)
+             
+
+            }).fail(function(jqXhr, status ,error) {
+                console.error(error)
+            })
+        })
+    })()
+    </script>
+</body>
+</html>
